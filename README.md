@@ -32,7 +32,7 @@ A `reporting` is then defined as a selection of `reporting tree nodes` identifyi
 
 In the above example the template defines two reporting contexts: WBS-number and activity. The finished reporting on the time entry is (in this case) `[947588800, 2115]` (Please note that in practice these will be uuids identifying each node and not their backend IDs as shown here fore the sake of simplicity).
 
-The backend integration must provide these trees and templates in the device database.
+The backend integration must provide these trees, contexts, sections and templates in the device database - preferable tailored to the individual user to create a better user experience.
 
 ### TimeEntry
 The main class of the application containing a single time entry.
