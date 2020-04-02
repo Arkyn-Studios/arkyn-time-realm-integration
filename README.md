@@ -28,7 +28,7 @@ Many of these will only be lists (trees with depth 1), but they can have any dep
 
 A `reporting` is then defined as a selection of `reporting tree nodes` identifying which elements from each tree to register the entry on. An entry can be created based on a `reporting template` that defines which trees to use in a registration. That is done by defining a list of `reporting contexts`. Examples of reporting templates could be: "Project", "Absence", "Leave".
 
-![Example](Example1.png "Example")
+![Example](example1.png "Example")
 
 In the above example the template defines two reporting contexts: WBS-number and activity. The finished reporting on the time entry is (in this case) `[947588800, 2115]` (Please note that in practice these will be uuids identifying each node and not their backend IDs as shown here fore the sake of simplicity).
 
