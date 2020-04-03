@@ -11,6 +11,8 @@ The system has been designed with a couple goals in mind:
 To accomodate these goals Realm is used as the database on the device and Realm Cloud to keep the on-device database synced with the backend.
 
 Apart from Realm a service for onboarding users and authentication is provided by Arkyn Studios.
+
+![Section example](system-design.png "Section example")
 ## Data Model
 Most time registration systems are built around the same concept: employees make a registration on a day - either with a start- and end-time or with a fixed amount of time. Then they choose what the registration is related to - that could be a project, an order number, etc. We call this part of the registration `reporting`.
 
@@ -36,7 +38,7 @@ Each reporting tree context can have a number of `reporting tree context section
 
 ![Section example](example2.png "Section example")
 
-The backend integration must provide these trees, contexts, sections and templates in the device database - preferable tailored to the individual user to create a better user experience.
+The backend integration must provide these trees, contexts, sections and templates in the device database - preferable tailored to the individual user to create a better user experience. See examples further down.
 
 ### TimeEntry
 The main class of the application containing a single time entry.
@@ -49,8 +51,21 @@ Class providing a templates for different kinds of registrations.
 ####
 
 ## Integration
+
 ### Authentication
+Authentication from the device towards Realm Cloud is done with a JWT-token issued by some identity-provider (e.g. Azure AD) with an authorization code flow initialized during the device onboarding. 
+
+Realm will use the public key for that provider to verify the token and user identity.
+
+Please use this guide to register an application:
+https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app
+
+The redirect-url to use is https://api.arkynstudios.com/auth_callback
+
+
+
 ### Backend
+
 
 
 Spørgsmål: 
