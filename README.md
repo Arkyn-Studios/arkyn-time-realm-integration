@@ -40,15 +40,59 @@ Each reporting tree context can have a number of `reporting tree context section
 
 The backend integration must provide these trees, contexts, sections and templates in the device database - preferable tailored to the individual user to create a better user experience. See examples further down.
 
-### TimeEntry
-The main class of the application containing a single time entry.
-#### Properties
-- id: (string, required) - A uuid for this specific time entry
-...
+## Onboarding A New Device
+This sections outlines what happens when the user opens the app for the first time.
 
-### ReportingTemplate
-Class providing a templates for different kinds of registrations.
-####
+1. The first time a user opens the app they are prompted for their mail-address which is posted to the Arkyn API. The API looks up which environment the user is associated with and triggers sends back the login-url for this environment along with a unique session-id for a websocket session.
+2. This triggers the initialization of a new realm in Realm Cloud (if one does not already exist)
+3. First the device must open the websocket connection, and then open the login-url at the Identity Provider (IdP) in a browser. This triggers an Oauth 2.0 code-flow.
+4. The users logs in on the identity-provider, and a callback is called at the Arkyn API. The API then requests a token with the given code, and sends that token to the device on the open websocket.
+5. Meanwhile the backend integration can initialize data in the user realm. When that is done a flag is set that the database is initialized and a message is sent to the device that all data is ready.
+
+Happy path scenario for first time users:
+```
+     ┌─────────┐                            ┌────────────┐              ┌────────────┐           ┌─────────────┐               ┌─────────────────────┐
+     │ App     │                            │ Arkyn API  │              │ IdP        │           │ Realm Cloud │               │ Backend integration │
+     └────┬────┘                            └────┬───────┘              └────┬───────┘           └─────┬───────┘               └──────────┬──────────┘
+          │     POST /register_device            ╎                           ╎  Initialize user realm  ╎                                  ╎
+          ╎────────────────────────────────────> ║───────────────────────────────────────────────────> ╎  Detect change: new user realm   ╎
+          ╎                                      ║                           ╎                         ╎┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄> ║ 
+          ╎ <────────────────────────────────────╜                           ╎                         ╎                                  ║
+          ╎     Response:                        ╎                           ╎                         ╎                                  ║
+          ╎        login_url                     ╎                           ╎                         ╎                                  ║
+          ╎        session_id                    ╎                           ╎                         ╎                                  ║
+          ╎                                      ╎                           ╎                         ╎                                  ║
+          ╎     Initiate WS with session id      ╎                           ╎                         ╎                                  ║
+          ║────────────────────────────────────> ║       GET /authorize      ╎                         ╎                                  ║
+          ║────────────────────────────────────────────────────────────────> ║                         ╎                                  ║
+          ║                                      ║  Callback with auth code  ║                         ╎                                  ║
+          ║                                      ║  <┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╜                         ╎                                  ║
+          ║                                      ║       POST /token         ╎                         ╎                                  ║
+          ║                                      ║─────────────────────────> ║                         ╎                                  ║
+          ║                                      ║      Response: token      ║                         ╎                                  ║
+          ║                                      ║  <────────────────────────╜                         ╎                                  ║
+┌╌╌╌╌╌┬╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┐                      ╎                         ╎                                  ║
+╎ *   ╎   ║                                      ║    ╎                      ╎                         ╎                                  ║
+├╌╌╌╌╌┘   ║ <┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╢    ╎                      ╎                         ╎                                  ║
+╎         ║ Upon token: Send JWT token to device ║    ╎                      ╎                         ╎                                  ║
+╎         ║                                      ║    ╎                      ╎                         ╎                                  ║
+└╌╌╌╌╌╌╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┘                      ╎                         ╎                                  ║
+          ║                                      ║                           ╎                         ╎                                  ║
+┌╌╌╌╌╌┬╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┐                      ╎                         ╎                                  ║
+╎ *   ╎   ║                                      ║    ╎                      ╎                         ╎                                  ║
+├╌╌╌╌╌┘   ║ <┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╢    ╎                      ╎                         ╎                                  ║
+╎         ║ Event: Realm initialized             ║    ╎                      ╎                         ╎                                  ║
+╎         ║ Payload: Realm path                  ║    ╎                      ╎                         ╎                                  ║
+└╌╌╌╌╌╌╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┘                      ╎                         ╎    Write user data done          ║
+          ║                                      ║      Detect change        ╎                         ╎  <───────────────────────────────╜
+┌╌╌╌╌╌┬╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┐ Write user data done ╎                         ╎                                  ╎
+╎ *   ╎   ║                                      ║ <┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╎                                  ╎
+├╌╌╌╌╌┘   ║ <┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╢    ╎                      ╎                         ╎                                  ╎
+╎         ║ Event: Data ready                    ║    ╎                      ╎                         ╎                                  ╎
+╎         ║                                      ║    ╎                      ╎                         ╎                                  ╎
+└╌╌╌╌╌╌╌╌╌╫╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╫╌╌╌╌┘                      ╎                         ╎                                  ╎
+
+```
 
 ## Integration
 
@@ -62,12 +106,8 @@ https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-regis
 
 The redirect-url to use is https://api.arkynstudios.com/auth_callback
 
+### Backend Integration
+The backend must connect to the Realm Cloud Platform. 
 
+This can be done with Node.js, .NET or through a GraphQL API.
 
-### Backend
-
-
-
-Spørgsmål: 
-- Kan man forestille sig at et træ er mandatory i en context, men ikke i en anden?
-- Kan man vælge mere end en node fra samme træ?
