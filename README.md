@@ -13,6 +13,13 @@ To accomodate these goals Realm is used as the database on the device and Realm 
 Apart from Realm a service for onboarding users and authentication is provided by Arkyn Studios.
 
 ![Section example](system-design.png "Section example")
+
+### Terminology
+* "Device" - The device of the end-user. At the moment this will be an iPhone.
+* "Backend" - Refers to the time registration backend e.g. SAP, Navision, e-conomic, etc.
+* "Backend integration" - Refers to the service responsible for integrating the backend with Arkyn Time i.e. the piece of software this document is intended for helping writing.
+* "Realm" - Both refers to the technology/company Realm and the concept "a realm". A realm is a small portable database. Please refer to Realm's documentation for further information about what Realm is.
+
 ## Data Model
 Most time registration systems are built around the same concept: employees make a registration on a day - either with a start- and end-time or with a fixed amount of time. Then they choose what the registration is related to - that could be a project, an order number, etc. We call this part of the registration `reporting`.
 
@@ -39,6 +46,42 @@ Each reporting tree context can have a number of `reporting tree context section
 ![Section example](example2.png "Section example")
 
 The backend integration must provide these trees, contexts, sections and templates in the device database - preferable tailored to the individual user to create a better user experience. See examples further down.
+
+### Time entries
+A `TimeEntry` is the main entity representing a time entry for the user. It has a number of fields (please refer to the GraphQL api to see all properties as they are subject to change at the moment). The most important ones are:
+* `id` (string) - this is a UUID that is generated when the entity is created (wether on the device or the backend integration).
+* `backendId` (string?) - a nullable field containing the id of the entry once created in the backend. The backend integration is responsible for writing this
+* `status` (string) - Current status of the entity (e.g. `submitted`, `released`, `rejected`).
+* `statusLog` (`TimeEntryStatus[]`) - A list of statuses this time entry has been through along with a relevant message (e.g. for invalid or rejected entries). The status with the most recent timestamp should also be the current status.
+* `text` (string?) - An optional title for the entry
+* `reportingTemplate` (`ReportingTemplate`) - The reporting template used for the time entry
+* `reporting` (string[]) - A list of UUIDs of the nodes this entry should registered on.
+* `timeType` (string) - Can be `interval` or `duration`
+* `entryDate` (date) - Date of entry
+* `startTime` (datetime?) - If `timeType` is `interval`
+* `endTime` (datetime?) - If `timeType` is `interval`
+* `duration` (float) - If `timeType` is `duration`
+* `createdOn` (date) - Date the entry was first created
+
+#### Time entry statuses
+A time entry will go through any number of statuses. At the moment these are (more may come with time):
+```
+┌──────────────┐    ┌─────────┐    ┌───────────┐    ┌───────────┐    ┌──────────┐    ┌────────────┐    ┌──────────┐    ┌──────────┐
+│ (suggestion) │ -> │ (draft) │ -> │ submitted │ -> │ (invalid) │ -> │ released │ -> │ (rejected) │ -> │ approved │ -> │ recorded │
+└──────────────┘    └─────────┘    └───────────┘    └───────────┘    └──────────┘    └────────────┘    └──────────┘    └──────────┘
+```
+Statuses written in parentheses are optional on an SAP backend. In theory all statuses are optional, so it's up to the backend integration to enforce which are mandatory. 
+
+* `suggestion` - Indicates that this entry is a suggestion generated for the user. This can both be done on the device and from the backend integration.
+* `draft` - This time entry has been created on the device but has not yet been submitted to the backend for validation. This status is set by the device.
+* `submitted` - The time entry has been submitted to the backend integration, but has not yet been written to the actual time registration backend. This status is written by the backend integration.
+* `invalid` - The time entry cannot be written to the time registration backend. This can happen for many different reasons - the most common case being mandatory fields are missing. This status is written by the backend integration.
+* `released` - The time entry has been written to the time registration backend and has been released for approval. This status is written by the backend integration.
+* `rejected` - The time entry has been rejected by an approver. This status is written by the backend integration.
+* `approved` - The time entry has been approved. This status is written by the backend integration.
+* `recorded` - The time entry has been recorded in the bookkeeping processes of the backend and is closed for further editing. This status is written by the backend integration.
+
+All statuses may not be relevant for all time registrations backends - in that case the backend integration will just skip the irrelevant statuses.
 
 ## Onboarding A New Device
 This sections outlines what happens when the user opens the app for the first time.
@@ -116,6 +159,8 @@ This can be done with GraphQL: https://docs.realm.io/sync/graphql-web-access/how
 Alternatively theres a Node.js or .NET SDK.
 Information regarding this, can be found here: https://docs.realm.io/sync/backend-integration/data-integration
 
+Connections are obtained using username / password credentials supplied by Arkyn.
+
 The backend integration has three main responsibilities (at the moment - more may come).
 
 #### Responsibility #1: Initialize device database
@@ -138,4 +183,15 @@ When changes happens in the backend these must be reflected in the users' databa
 
 Also it is important to keep time entries in sync, meaning that if new entries are created elsewhere and/or the status of entries change, this should of course be reflected in the users' realm.
 
-#### Responsibility #3: Submit new timeentries to backend
+#### Responsibility #3: Submit new timeentries from the device to the backend
+When the user creates a new time entry on the device the backend integration must submit it to the backend.
+
+In order to do so the reporting nodes must be resolved in order to figure out where to register the time.
+
+If the time entry is invalid (either missing mandatory fields and/or other error messages from the backend), the time entry's status must be set to "invalid" along with a list of messages describing this/these error(s) (using the `statusLog` field).
+
+If the time entry is successfully committed to the backend the entry should recieve the status `released`. Please make sure that the entry is indeed released for approval in the backend.
+
+## Examples
+
+###
