@@ -97,6 +97,8 @@ Happy path scenario for first time users:
 ## Integration
 
 ### Authentication
+*TBD! This is not ready yet, and may be subject to change, so please wait before doing this step*
+
 Authentication from the device towards Realm Cloud is done with a JWT-token issued by some identity-provider (e.g. Azure AD) with an authorization code flow initialized during the device onboarding. 
 
 Realm will use the public key for that provider to verify the token and user identity.
@@ -104,10 +106,36 @@ Realm will use the public key for that provider to verify the token and user ide
 Please use this guide to register an application:
 https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app
 
-The redirect-url to use is https://api.arkynstudios.com/auth_callback
+The redirect-url to use is https://api.arkynstudios.com/auth_callback (TBD)
 
 ### Backend Integration
-The backend must connect to the Realm Cloud Platform. 
+The backend must connect to the Realm Cloud Platform and manipulate the data in the individual users' realms. A "realm" is an individual database in Realm terminology. Each device will have a separate realm containing the data relevant for that user. Realms are identified by a path (e.g. `/users/{user-id}`).
 
-This can be done with Node.js, .NET or through a GraphQL API.
+This can be done with GraphQL: https://docs.realm.io/sync/graphql-web-access/how-to-use-the-api
 
+Alternatively theres a Node.js or .NET SDK.
+Information regarding this, can be found here: https://docs.realm.io/sync/backend-integration/data-integration
+
+The backend integration has three main responsibilities (at the moment - more may come).
+
+#### Responsibility #1: Initialize device database
+The backend integration must subscribe to changes in the realm `/users` on the entity `Realms`. When new users are onboarded (see the section about onboarding new users) a new entity is added to this table. The entity contains information about the user ID (the email address) and the path to the realm of that users.
+
+When that happens the backend integration must generate the following data in the users' realm:
+1. Reporting data (see section Data Model for elaboration)
+    1. Reporting trees
+    2. Reporting sections
+    3. Reporting contexts
+    4. Reporting templates
+2. Existing time entries (for relevant period of time backwards)
+
+After this process is done the flag `is_initialized` must be set to `true` on the `Realms`-entity.
+
+Please note, that the main focus should be on the usability for the user - that means that all data should be filtered from the users' perspective i.e. projects that are not relevant/open for the user to report on shouldn't be added. When possible a "suggestions" section should be added to a reporting context, giving the user sensible choices.
+
+#### Responsibility #2: Keep database in sync with backend
+When changes happens in the backend these must be reflected in the users' database. That could be when new customers and/or projects are added, old projects are deleted, etc.
+
+Also it is important to keep time entries in sync, meaning that if new entries are created elsewhere and/or the status of entries change, this should of course be reflected in the users' realm.
+
+#### Responsibility #3: Submit new timeentries to backend
