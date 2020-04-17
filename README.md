@@ -55,7 +55,7 @@ A `TimeEntry` is the main entity representing a time entry for the user. It has 
 * `statusLog` (`TimeEntryStatus[]`) - A list of statuses this time entry has been through along with a relevant message (e.g. for invalid or rejected entries). The status with the most recent timestamp should also be the current status.
 * `text` (string?) - An optional title for the entry
 * `reportingTemplate` (`ReportingTemplate`) - The reporting template used for the time entry
-* `reporting` (string[]) - A list of UUIDs of the nodes this entry should registered on.
+* `reporting` (`ReportingSelection[]`) - A list of reporting selections that has been done for this entry.
 * `timeType` (string) - Can be `interval` or `duration`
 * `entryDate` (date) - Date of entry
 * `startTime` (datetime?) - If `timeType` is `interval`
@@ -193,7 +193,7 @@ If the time entry is invalid (either missing mandatory fields and/or other error
 If the time entry is successfully committed to the backend the entry should recieve the status `released`. Please make sure that the entry is indeed released for approval in the backend.
 
 ## Examples
-This section will contain a few json-examples on how data structures could look.
+This section will contain a few pseudo json-examples on how data structures could look.
 
 ### Reporting structures
 In this example a time entry will be created on a reporting template containing five different contexts:
@@ -207,10 +207,247 @@ Each context is dependent on the context before it, so "kind" is dependent on "a
 
 They are each just a list, so a tree of depth 2.
 
-Lets start by creating defining "Customer":
+Lets start by creating defining customers (`ReportingTreeNode`):
 
 ```json
 {
-    id: ""
+    id: "66dbe9fc-e62f-4d42-a558-c5f0aee25654",
+    name: "customer-root",
+    hasDependencies: false,
+    dependencies: [],
+    children: [
+        { 
+            id: "ac7bccce-190e-4679-ab67-cc17826f1f67",
+            referenceId: "12345",
+            name: "DSB",
+            title: "DSB",
+            hasDependencies: false,
+            dependencies: [],
+            children: []
+        },
+        { 
+            id: "3b31963f-c160-4972-84af-6258202d3060",
+            referenceId: "12346",
+            name: "Arkyn Studios Aps",
+            title: "Arkyn Studios Aps",
+            hasDependencies: false,
+            dependencies: [],
+            children: []
+        },
+        ...
+    ]
 }
 ```
+
+From there we can define projects:
+```json
+{
+    id: "2a33c1ef-ed92-4b1c-8ed3-e611d8b2fe4d",
+    name: "project-root",
+    hasDependencies: false,
+    dependencies: [],
+    children: [
+        { 
+            id: "19aef05b-027b-4836-9eb3-7683294a5d2a",
+            referenceId: "ABC123",
+            name: "Some DSB Project",
+            title: "DSB - Some DSB Project",
+            hasDependencies: true,
+            dependencies: [{ id: "ac7bccce-190e-4679-ab67-cc17826f1f67"}],
+            children: []
+        },
+        { 
+            id: "a65aa78a-fd83-4f46-b74e-c6f05b1f1989",
+            referenceId: "ABC124",
+            name: "Design",
+            title: "Design",
+            hasDependencies: true,
+            dependencies: [{ id: "3b31963f-c160-4972-84af-6258202d3060"}],
+            children: []
+        },
+        ...
+    ]
+}
+```
+
+Phases:
+```json
+{
+    id: "4e86a728-a1f0-41de-af35-efe511801889",
+    name: "phases-root",
+    hasDependencies: false,
+    dependencies: [],
+    children: [
+        ...,
+        { 
+            id: "79b19250-8ab7-4627-83c9-6593c98b7f47",
+            referenceId: "P1",
+            name: "Div. grafisk arbejde",
+            title: "Div. grafisk arbejde",
+            hasDependencies: true,
+            dependencies: [{ id: "a65aa78a-fd83-4f46-b74e-c6f05b1f1989"}],
+            children: []
+        },
+        ...
+    ]
+}
+```
+
+Activities:
+```json
+{
+    id: "80372fd0-42d9-42b6-b3f8-7a9878a82c36",
+    name: "activities-root",
+    hasDependencies: false,
+    dependencies: [],
+    children: [
+        ...,
+        { 
+            id: "6b7e3cfc-c377-41e9-bf68-e0a20274851a",
+            referenceId: "A1",
+            name: "Timer",
+            title: "Timer",
+            hasDependencies: true,
+            dependencies: [{ id: "79b19250-8ab7-4627-83c9-6593c98b7f47"}, ...],
+            children: []
+        },
+        ...
+    ]
+}
+```
+If we imagine that activities are shared across all projects and phases, it will just have a list of dependencies with all phases (relevant for that user), that have "Timer" as a possible activity.
+
+Lastly we define kind:
+```json
+{
+    id: "de808bee-75f2-4ad1-b656-ac9b3bfec741",
+    name: "activities-root",
+    hasDependencies: false,
+    dependencies: [],
+    children: [
+        { 
+            id: "96ba7b19-0bfa-4a36-ac96-4a83b0aabb31",
+            referenceId: "K1",
+            name: "Fakturérbare",
+            title: "Fakturérbare",
+            hasDependencies: true,
+            dependencies: [{ id: "6b7e3cfc-c377-41e9-bf68-e0a20274851a"}],
+            children: []
+        },
+        { 
+            id: "d0575d68-4052-4958-bc3e-97605f9e1d5d",
+            referenceId: "K2",
+            name: "Ikke fakturérbart",
+            title: "Ikke fakturérbart",
+            hasDependencies: true,
+            dependencies: [{ id: "6b7e3cfc-c377-41e9-bf68-e0a20274851a"}],
+            children: []
+        },
+        { 
+            id: "31cb3362-11ec-47ad-8824-3b27fa3b94a0",
+            referenceId: "K3",
+            name: "Overarbejde",
+            title: "Overarbejde",
+            hasDependencies: true,
+            dependencies: [{ id: "6b7e3cfc-c377-41e9-bf68-e0a20274851a"}],
+            children: []
+        },
+        ...
+    ]
+}
+```
+
+### Sections
+We can define other 
+
+### Reporting template
+Now that the reporting structures has been created we can start to define a reporting template. To do that we first define the five reporting contexts:
+
+```json
+{
+    id: "ecede996-1b85-45dc-9ee0-89da88f97441",
+    name: "Customer",
+    required: true,
+    sections: [
+        {
+            name: "Suggestions",
+            showCount: 5,
+            items: [{ id: "3b31963f-c160-4972-84af-6258202d3060"}]
+        },
+        {
+            name: "All",
+            rootNode: { id: "66dbe9fc-e62f-4d42-a558-c5f0aee25654" }
+        }
+    ]
+}
+```
+As seen above a section can either define a rootNode (whose children will be shown) or a list of items which are just individual nodes at any level. Also there's an optional showcount.
+
+Defining the remaining contexts:
+```json
+{
+    id: "0eec02fb-8463-4e4c-ae50-dd6a377a270c",
+    name: "Project",
+    required: true,
+    sections: [
+        {
+            name: "All",
+            rootNode: { id: "2a33c1ef-ed92-4b1c-8ed3-e611d8b2fe4d" }
+        }
+    ]
+}
+
+{
+    id: "ed0c006c-2ba7-4a2b-8843-88b8e2d16c96",
+    name: "Phase",
+    required: true,
+    sections: [
+        {
+            name: "All",
+            rootNode: { id: "4e86a728-a1f0-41de-af35-efe511801889" }
+        }
+    ]
+}
+
+{
+    id: "d5b7219c-75b7-4c93-ad37-4c21985deb39",
+    name: "Activity",
+    required: true,
+    sections: [
+        {
+            name: "All",
+            rootNode: { id: "80372fd0-42d9-42b6-b3f8-7a9878a82c36" }
+        }
+    ]
+}
+
+{
+    id: "2a15f5a0-5df3-4cde-8eff-4def5988b200",
+    name: "Kind",
+    required: true,
+    sections: [
+        {
+            name: "All",
+            rootNode: { id: "6f45167b-ae9f-467a-b2b6-5dcf674a900b" }
+        }
+    ]
+}
+```
+
+This enables us to finally define the reporting context:
+```json
+{
+    name: "Project time registration",
+    type: "project",
+    reportingContexts: [
+        { id: "ecede996-1b85-45dc-9ee0-89da88f97441" },
+        { id: "0eec02fb-8463-4e4c-ae50-dd6a377a270c" },
+        { id: "ed0c006c-2ba7-4a2b-8843-88b8e2d16c96" },
+        { id: "d5b7219c-75b7-4c93-ad37-4c21985deb39" },
+        { id: "2a15f5a0-5df3-4cde-8eff-4def5988b200" }
+    ]
+}
+```
+This context can then be added to the user-object's list of available reporting templates.
+
+In similar fashion other reporting templates can be defined for e.g. paid leave, sickness, etc. These would typically have preselected values for many or all of the contexts, limiting the amount of selections the end-user has to make. This can be done via the fields `preselected`, `visible` and `readOnly` on `ReportingContext`.
