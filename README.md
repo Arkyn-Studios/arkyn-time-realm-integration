@@ -5,7 +5,7 @@ Arkyn Time is the first app from Arkyn Studios - a startup focused on creating "
 ## System Design
 The system has been designed with a couple goals in mind:
 - The device must not be waiting on the backend for long-running queries, commands, etc. All actions on the device must be close instantaneous in order to provide a responsive interface.
-- It should be easy to write integrations to other backends than SAP.
+- It should be possible to write integrations to other backends than SAP.
 - When using SAP backends the system should be easy to configure and get up and running quick - without the need for extensive integration projects.
 
 To accomodate these goals Realm is used as the database on the device and Realm Cloud to keep the on-device database synced with the backend.
@@ -55,7 +55,7 @@ A `TimeEntry` is the main entity representing a time entry for the user. It has 
 * `statusLog` (`TimeEntryStatus[]`) - A list of statuses this time entry has been through along with a relevant message (e.g. for invalid or rejected entries). The status with the most recent timestamp should also be the current status.
 * `text` (string?) - An optional title for the entry
 * `reportingTemplate` (`ReportingTemplate`) - The reporting template used for the time entry
-* `reporting` (`ReportingSelection[]`) - A list of reporting selections that has been done for this entry.
+* `reporting` (`ReportingSelection[]`) - A list of reporting selections that has been done for this entry. This type has two properties: 
 * `timeType` (string) - Can be `interval` or `duration`
 * `entryDate` (date) - Date of entry
 * `startTime` (datetime?) - If `timeType` is `interval`
