@@ -2,6 +2,10 @@
 This repository contains information about the iOS-app Arkyn Time and how to write an integration for a custom backend through the synced Realm-database on the device.
 ## Updates
 * 2020-04-20 Please note - the examples regarding dependencies on reporting trees are currently subject to change, as we are working on an improved model.
+
+## Data model change log
+* 2020-04-20 `TimeEntry` duration is no longer a `float` (fraction of hours) but an `int` (seconds)
+
 ## Overview
 Arkyn Time is the first app from Arkyn Studios - a startup focused on creating "consumer grade" apps within the Smart Enterprise space i.e. apps built for large coorporations (primarily with SAP backends).
 ## System Design
