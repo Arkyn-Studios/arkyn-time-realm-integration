@@ -1,5 +1,7 @@
 # Arkyn Time - Realm Integration
 This repository contains information about the iOS-app Arkyn Time and how to write an integration for a custom backend through the synced Realm-database on the device.
+## Updates
+* 2020-04-20 Please note - the examples regarding dependencies on reporting trees are currently subject to change, as we are working on an improved model.
 ## Overview
 Arkyn Time is the first app from Arkyn Studios - a startup focused on creating "consumer grade" apps within the Smart Enterprise space i.e. apps built for large coorporations (primarily with SAP backends).
 ## System Design
@@ -196,6 +198,8 @@ If the time entry is successfully committed to the backend the entry should reci
 This section will contain a few pseudo json-examples on how data structures could look.
 
 ### Reporting structures
+_Please note - the examples regarding dependencies on reporting trees are currently subject to change, as we are working on an improved model._
+
 In this example a time entry will be created on a reporting template containing five different contexts:
 * Customer
 * Project
